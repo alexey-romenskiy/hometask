@@ -33,6 +33,6 @@ public class PendingQueryWithdrawal extends PendingOperation {
 
     @Override
     protected void withdrawalStatesUpdated() {
-        controller.continueQueryWithdrawal(sessionId, trackingId, withdrawal);
+        controller.performQueryWithdrawal(sessionId, trackingId, withdrawal);
     }
 }

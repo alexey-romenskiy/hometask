@@ -60,7 +60,7 @@ public class ServerAdapter implements FragmentHandler {
     }
 
     @Override
-    public void onFragment(final DirectBuffer buffer, final int offset, final int length, final Header header) {
+    public void onFragment(@NotNull DirectBuffer buffer, int offset, int length, @NotNull Header header) {
 
         headerDecoder.wrap(buffer, offset);
         final int headerLength = headerDecoder.encodedLength();
@@ -102,7 +102,7 @@ public class ServerAdapter implements FragmentHandler {
                         queryWithdrawalDecoder.withdrawalId()));
                 break;
             default:
-                break;
+                throw new RuntimeException("Unknown message");
         }
     }
 
@@ -116,7 +116,7 @@ public class ServerAdapter implements FragmentHandler {
         }
     }
 
-    private void blockingOpenConnection(final int streamId, final String uri, int sessionId) {
+    private void blockingOpenConnection(int streamId, @NotNull String uri, int sessionId) {
         logger.info("Received connect request with response URI {} stream {}", uri, streamId);
         final var publication = aeron.addExclusivePublication(uri, streamId);
         publicationsBySessionId.put(sessionId, publication);

@@ -40,6 +40,7 @@ public class DisruptorManager {
     @NotNull
     private final AgentRunner serverAgentRunner;
 
+    @NotNull
     private final PublisherEventHandler publisherEventHandler;
 
     public DisruptorManager() {

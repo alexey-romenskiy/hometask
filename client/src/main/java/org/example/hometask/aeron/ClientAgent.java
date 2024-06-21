@@ -35,11 +35,16 @@ public class ClientAgent implements Agent {
 
     protected final Logger logger = LoggerFactory.getLogger(getClass());
 
+    @NotNull
     private final Aeron aeron;
+
+    @NotNull
     private final ConcurrentLinkedQueue<AeronRequest> requestQueue;
-    private final BlockingQueue<AeronResponse> responseQueue;
-    private final ExpandableDirectByteBuffer buffer = new ExpandableDirectByteBuffer(250);
+
+    @NotNull
     private final ClientAdapter clientAdapter;
+
+    private final ExpandableDirectByteBuffer buffer = new ExpandableDirectByteBuffer(250);
     private final RpcConnectRequestEncoder connectRequest = new RpcConnectRequestEncoder();
     private final CreateAccountEncoder createAccountEncoder = new CreateAccountEncoder();
     private final QueryAccountEncoder queryAccountEncoder = new QueryAccountEncoder();
@@ -49,7 +54,9 @@ public class ClientAgent implements Agent {
     private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
 
     private State state;
+
     private ExclusivePublication publication;
+
     private Subscription subscription;
 
     public ClientAgent(
@@ -59,7 +66,6 @@ public class ClientAgent implements Agent {
     ) {
         this.aeron = aeron;
         this.requestQueue = requestQueue;
-        this.responseQueue = responseQueue;
         this.clientAdapter = new ClientAdapter(responseQueue);
     }
 
@@ -190,18 +196,14 @@ public class ClientAgent implements Agent {
     }
 
     private void send(final DirectBuffer buffer, final int length) {
-        int retries = 3;
 
-        do {
-            //in this example, the offset it always zero. This will not always be the case.
+        while (true) {
             final long result = publication.offer(buffer, 0, length);
-            if (result > 0) {
+            if (result >= 0) {
                 break;
-            } else {
-                logger.info("aeron returned {} on offer", result);
             }
+            logger.warn("Publication returned: {}", result);
         }
-        while (--retries > 0);
     }
 
     enum State {

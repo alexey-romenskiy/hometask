@@ -25,8 +25,6 @@ import org.example.hometask.messages.response.NoSuchEntityAeronResponse;
 import org.example.hometask.messages.response.SameAccountAeronResponse;
 import org.example.hometask.messages.response.WithdrawalDataAeronResponse;
 import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.BlockingQueue;
 
@@ -34,7 +32,6 @@ import static org.example.hometask.utils.Utils.getBigDecimal;
 
 public class ClientAdapter implements FragmentHandler {
 
-    private final Logger logger = LoggerFactory.getLogger(ClientAdapter.class);
     private final AccountCreatedDecoder accountCreatedDecoder = new AccountCreatedDecoder();
     private final AccountTransferDoneDecoder accountTransferDoneDecoder = new AccountTransferDoneDecoder();
     private final AccountWithdrawalDoneDecoder accountWithdrawalDoneDecoder = new AccountWithdrawalDoneDecoder();
@@ -52,7 +49,7 @@ public class ClientAdapter implements FragmentHandler {
     }
 
     @Override
-    public void onFragment(DirectBuffer buffer, int offset, int length, Header header) {
+    public void onFragment(@NotNull DirectBuffer buffer, int offset, int length, @NotNull Header header) {
 
         headerDecoder.wrap(buffer, offset);
         //noinspection ResultOfMethodCallIgnored
@@ -60,7 +57,7 @@ public class ClientAdapter implements FragmentHandler {
     }
 
     @NotNull
-    private AeronResponse parse(DirectBuffer buffer, int offset) {
+    private AeronResponse parse(@NotNull DirectBuffer buffer, int offset) {
         switch (headerDecoder.templateId()) {
             case AccountCreatedDecoder.TEMPLATE_ID -> {
                 accountCreatedDecoder.wrap(buffer, offset + headerDecoder.encodedLength(), headerDecoder.blockLength(),

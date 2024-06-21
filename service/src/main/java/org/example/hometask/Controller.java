@@ -40,6 +40,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.UUID;
 
+import static java.util.Objects.requireNonNull;
+
 public class Controller {
 
     protected final Logger logger = LoggerFactory.getLogger(getClass());
@@ -72,7 +74,7 @@ public class Controller {
 
             @Override
             public Void visit(@NotNull CreateWithdrawalSuccessEvent event) {
-                withdrawalsByUuid.get(event.withdrawalId().value()).createDone();
+                getWithdrawal(event.withdrawalId()).createDone();
                 return null;
             }
 
@@ -81,20 +83,20 @@ public class Controller {
                 // We assume nobody else could use iur UUID and the withdrawal was just created earlier.
                 // This may occur after temporary network failure or restart of our service.
                 logger.warn("Duplicated withdrawal UUID encountered: {}", event.withdrawalId().value());
-                withdrawalsByUuid.get(event.withdrawalId().value()).createDone();
+                getWithdrawal(event.withdrawalId()).createDone();
                 return null;
             }
 
             @Override
             public Void visit(@NotNull QueryWithdrawalSuccessEvent event) {
-                withdrawalsByUuid.get(event.withdrawalId().value()).queryDone(event.state());
+                getWithdrawal(event.withdrawalId()).queryDone(event.state());
                 return null;
             }
 
             @Override
             public Void visit(@NotNull QueryWithdrawalUnknownIdFailureEvent event) {
                 logger.error("Failed to update withdrawal state for UUID: {}", event.withdrawalId().value());
-                withdrawalsByUuid.get(event.withdrawalId().value()).queryFailed();
+                getWithdrawal(event.withdrawalId()).queryFailed();
                 return null;
             }
         });
@@ -134,6 +136,11 @@ public class Controller {
         });
     }
 
+    @NotNull
+    private Withdrawal getWithdrawal(@NotNull WithdrawalService.WithdrawalId withdrawalId) {
+        return requireNonNull(withdrawalsByUuid.get(withdrawalId.value()));
+    }
+
     private void createAccount(@NotNull InboundAeronMessageEvent event, @NotNull CreateAccountAeronRequest message) {
 
         final var amount = message.initialAmount();
@@ -171,17 +178,22 @@ public class Controller {
         }
 
         if (fromAccount.reduce(amount)) {
-            toAccount.adjustAvailable(amount);
-            publisher.publish(event.sessionId(), new AccountTransferDoneAeronResponse(message.trackingId()));
+            performAccountTransfer(event.sessionId(), message.trackingId(), toAccount, amount);
         } else {
             final var pendingWithdrawals = fromAccount.getPendingWithdrawals();
             if (pendingWithdrawals.isEmpty() || amount.compareTo(fromAccount.getPendingAmount()) > 0) {
                 publisher.publish(event.sessionId(), new NoFundsAeronResponse(message.trackingId()));
             } else {
                 final var pendingWithdrawalIds = new HashSet<Long>();
-                final var pendingTransfer =
-                        new PendingTransfer(this, event.sessionId(), message.trackingId(), fromAccount, toAccount,
-                                amount, pendingWithdrawalIds);
+                final var pendingTransfer = new PendingTransfer(
+                        this,
+                        event.sessionId(),
+                        message.trackingId(),
+                        fromAccount,
+                        toAccount,
+                        amount,
+                        pendingWithdrawalIds
+                );
                 for (final var withdrawal : pendingWithdrawals.values()) {
                     pendingWithdrawalIds.add(withdrawal.getId());
                     withdrawal.updateState(new PendingWithdrawalQuery(pendingTransfer, withdrawal.getId()));
@@ -198,11 +210,20 @@ public class Controller {
             @NotNull BigDecimal amount
     ) {
         if (fromAccount.reduce(amount)) {
-            toAccount.adjustAvailable(amount);
-            publisher.publish(sessionId, new AccountTransferDoneAeronResponse(trackingId));
+            performAccountTransfer(sessionId, trackingId, toAccount, amount);
         } else {
             publisher.publish(sessionId, new NoFundsAeronResponse(trackingId));
         }
+    }
+
+    private void performAccountTransfer(
+            int sessionId,
+            long trackingId,
+            @NotNull Account toAccount,
+            @NotNull BigDecimal amount
+    ) {
+        toAccount.adjustAvailable(amount);
+        publisher.publish(sessionId, new AccountTransferDoneAeronResponse(trackingId));
     }
 
     private void accountWithdrawal(
@@ -223,21 +244,22 @@ public class Controller {
         }
 
         if (fromAccount.reduce(amount)) {
-            fromAccount.adjustReserved(amount);
-            final var withdrawal = new Withdrawal(publisher, ++withdrawalSequence, fromAccount, amount,
-                    new WithdrawalService.Address(message.toAddress()), generateUuid(), event.sessionId(),
-                    message.trackingId());
-            withdrawals.put(withdrawal.getId(), withdrawal);
-            withdrawalsByUuid.put(withdrawal.getUuid(), withdrawal);
+            performAccountWithdrawal(event.sessionId(), message.trackingId(), fromAccount, message.toAddress(), amount);
         } else {
             final var pendingWithdrawals = fromAccount.getPendingWithdrawals();
             if (pendingWithdrawals.isEmpty() || amount.compareTo(fromAccount.getPendingAmount()) > 0) {
                 publisher.publish(event.sessionId(), new NoFundsAeronResponse(message.trackingId()));
             } else {
                 final var pendingWithdrawalIds = new HashSet<Long>();
-                final var pendingWithdrawal =
-                        new PendingWithdrawal(this, event.sessionId(), message.trackingId(), fromAccount,
-                                message.toAddress(), amount, pendingWithdrawalIds);
+                final var pendingWithdrawal = new PendingWithdrawal(
+                        this,
+                        event.sessionId(),
+                        message.trackingId(),
+                        fromAccount,
+                        message.toAddress(),
+                        amount,
+                        pendingWithdrawalIds
+                );
                 for (final var withdrawal : pendingWithdrawals.values()) {
                     pendingWithdrawalIds.add(withdrawal.getId());
                     withdrawal.updateState(new PendingWithdrawalQuery(pendingWithdrawal, withdrawal.getId()));
@@ -254,14 +276,31 @@ public class Controller {
             @NotNull BigDecimal amount
     ) {
         if (fromAccount.reduce(amount)) {
-            fromAccount.adjustReserved(amount);
-            final var withdrawal = new Withdrawal(publisher, ++withdrawalSequence, fromAccount, amount,
-                    new WithdrawalService.Address(toAddress), generateUuid(), sessionId, trackingId);
-            withdrawals.put(withdrawal.getId(), withdrawal);
-            withdrawalsByUuid.put(withdrawal.getUuid(), withdrawal);
+            performAccountWithdrawal(sessionId, trackingId, fromAccount, toAddress, amount);
         } else {
             publisher.publish(sessionId, new NoFundsAeronResponse(trackingId));
         }
+    }
+
+    private void performAccountWithdrawal(
+            int sessionId,
+            long trackingId,
+            @NotNull Account fromAccount,
+            @NotNull String toAddress,
+            @NotNull BigDecimal amount
+    ) {
+        fromAccount.adjustReserved(amount);
+        final var withdrawal = new Withdrawal(
+                publisher,
+                ++withdrawalSequence,
+                fromAccount, amount,
+                new WithdrawalService.Address(toAddress),
+                generateUuid(),
+                sessionId,
+                trackingId
+        );
+        withdrawals.put(withdrawal.getId(), withdrawal);
+        withdrawalsByUuid.put(withdrawal.getUuid(), withdrawal);
     }
 
     private void queryAccount(
@@ -280,9 +319,13 @@ public class Controller {
             continueQueryAccount(event.sessionId(), message.trackingId(), account);
         } else {
             final var pendingWithdrawalIds = new HashSet<Long>();
-            final var pendingQueryAccount =
-                    new PendingQueryAccount(this, event.sessionId(), message.trackingId(), account,
-                            pendingWithdrawalIds);
+            final var pendingQueryAccount = new PendingQueryAccount(
+                    this,
+                    event.sessionId(),
+                    message.trackingId(),
+                    account,
+                    pendingWithdrawalIds
+            );
             for (final var withdrawal : pendingWithdrawals.values()) {
                 pendingWithdrawalIds.add(withdrawal.getId());
                 withdrawal.updateState(new PendingWithdrawalQuery(pendingQueryAccount, withdrawal.getId()));
@@ -314,17 +357,21 @@ public class Controller {
 
         if (withdrawal.getState() == WithdrawalState.PROCESSING) {
             final var pendingWithdrawalIds = new HashSet<Long>();
-            final var pendingQueryWithdrawal =
-                    new PendingQueryWithdrawal(this, event.sessionId(), message.trackingId(), withdrawal,
-                            pendingWithdrawalIds);
+            final var pendingQueryWithdrawal = new PendingQueryWithdrawal(
+                    this,
+                    event.sessionId(),
+                    message.trackingId(),
+                    withdrawal,
+                    pendingWithdrawalIds
+            );
             pendingWithdrawalIds.add(withdrawal.getId());
             withdrawal.updateState(new PendingWithdrawalQuery(pendingQueryWithdrawal, withdrawal.getId()));
         } else {
-            continueQueryWithdrawal(event.sessionId(), message.trackingId(), withdrawal);
+            performQueryWithdrawal(event.sessionId(), message.trackingId(), withdrawal);
         }
     }
 
-    public void continueQueryWithdrawal(
+    public void performQueryWithdrawal(
             int sessionId,
             long trackingId,
             @NotNull Withdrawal withdrawal

@@ -82,34 +82,6 @@ public class Withdrawal {
         publishCreate();
     }
 
-    public long getId() {
-        return id;
-    }
-
-    @NotNull
-    public UUID getUuid() {
-        return uuid;
-    }
-
-    @NotNull
-    public Account getAccount() {
-        return account;
-    }
-
-    @NotNull
-    public BigDecimal getAmount() {
-        return amount;
-    }
-
-    public boolean isCreated() {
-        return created;
-    }
-
-    @NotNull
-    public WithdrawalState getState() {
-        return state;
-    }
-
     public void updateState(@NotNull PendingWithdrawalQuery query) {
 
         if (state != PROCESSING) {
@@ -123,13 +95,6 @@ public class Withdrawal {
             pendingQueries.add(query);
             publishQuery();
         }
-    }
-
-    public void createDone() {
-        // from now, we can query its state:
-        created = true;
-        account.withdrawalCreated(this);
-        publisher.publish(sessionId, new AccountWithdrawalDoneAeronResponse(trackingId, id));
     }
 
     public void queryDone(@NotNull WithdrawalState state) {
@@ -169,11 +134,46 @@ public class Withdrawal {
         }
     }
 
+    public void createDone() {
+        // from now, we can query its state:
+        created = true;
+        account.withdrawalCreated(this);
+        publisher.publish(sessionId, new AccountWithdrawalDoneAeronResponse(trackingId, id));
+    }
+
     private void publishQuery() {
         publisher.publish(new QueryWithdrawalRequest(new WithdrawalService.WithdrawalId(uuid)));
     }
 
     private void publishCreate() {
         publisher.publish(new CreateWithdrawalRequest(new WithdrawalService.WithdrawalId(uuid), address, amount));
+    }
+
+    public long getId() {
+        return id;
+    }
+
+    @NotNull
+    public UUID getUuid() {
+        return uuid;
+    }
+
+    @NotNull
+    public Account getAccount() {
+        return account;
+    }
+
+    @NotNull
+    public BigDecimal getAmount() {
+        return amount;
+    }
+
+    public boolean isCreated() {
+        return created;
+    }
+
+    @NotNull
+    public WithdrawalState getState() {
+        return state;
     }
 }
