@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<sbe:messageSchema xmlns:sbe="http://fixprotocol.io/2016/sbe"
+                   package="org.example.hometask.api"
+                   id="1"
+                   version="0"
+                   semanticVersion="0.1"
+                   description="Hometask SBE Messages"
+                   byteOrder="littleEndian">
+    <types>
+        <composite name="messageHeader" description="Message identifiers and length of message root">
+            <type name="blockLength" primitiveType="uint16"/>
+            <type name="templateId" primitiveType="uint16"/>
+            <type name="schemaId" primitiveType="uint16"/>
+            <type name="version" primitiveType="uint16"/>
+        </composite>
+        <composite name="varStringEncoding">
+            <type name="length" primitiveType="uint32" maxValue="250"/>
+            <type name="varData" primitiveType="uint8" length="0" characterEncoding="UTF-8"/>
+        </composite>
+        <composite name="Decimal">
+            <type name="mantissa" primitiveType="int64"/>
+            <type name="exponent" primitiveType="int8"/>
+        </composite>
+        <enum name="WithdrawalState" encodingType="uint8">
+            <validValue name="PROCESSING">0</validValue>
+            <validValue name="COMPLETED">1</validValue>
+            <validValue name="FAILED">2</validValue>
+        </enum>
+    </types>
+
+    <sbe:message name="RpcConnectRequest" id="10" description="RPC Sample Connect Request">
+        <field name="returnConnectStream" id="1" type="uint16"/>
+        <data name="returnConnectUri" id="2" type="varStringEncoding"/>
+    </sbe:message>
+
+    <sbe:message name="CreateAccount" id="11">
+        <field name="trackingId" id="1" type="uint64"/>
+        <field name="initialAmount" id="2" type="Decimal"/>
+    </sbe:message>
+
+    <sbe:message name="QueryAccount" id="12">
+        <field name="trackingId" id="1" type="uint64"/>
+        <field name="accountId" id="2" type="uint64"/>
+    </sbe:message>
+
+    <sbe:message name="AccountTransfer" id="13">
+        <field name="trackingId" id="1" type="uint64"/>
+        <field name="fromAccountId" id="2" type="uint64"/>
+        <field name="toAccountId" id="3" type="uint64"/>
+        <field name="amount" id="4" type="Decimal"/>
+    </sbe:message>
+
+    <sbe:message name="AccountWithdraw" id="14">
+        <field name="trackingId" id="1" type="uint64"/>
+        <field name="fromAccountId" id="2" type="uint64"/>
+        <field name="amount" id="3" type="Decimal"/>
+        <data name="toAddress" id="4" type="varStringEncoding"/>
+    </sbe:message>
+
+    <sbe:message name="QueryWithdrawal" id="15">
+        <field name="trackingId" id="1" type="uint64"/>
+        <field name="withdrawalId" id="2" type="uint64"/>
+    </sbe:message>
+
+    <sbe:message name="AccountCreated" id="16">
+        <field name="trackingId" id="1" type="uint64"/>
+        <field name="accountId" id="2" type="uint64"/>
+    </sbe:message>
+
+    <sbe:message name="AccountTransferDone" id="17">
+        <field name="trackingId" id="1" type="uint64"/>
+    </sbe:message>
+
+    <sbe:message name="AccountWithdrawalDone" id="18">
+        <field name="trackingId" id="1" type="uint64"/>
+        <field name="withdrawalId" id="2" type="uint64"/>
+    </sbe:message>
+
+    <sbe:message name="NoFunds" id="19">
+        <field name="trackingId" id="1" type="uint64"/>
+    </sbe:message>
+
+    <sbe:message name="InvalidAmount" id="20">
+        <field name="trackingId" id="1" type="uint64"/>
+    </sbe:message>
+
+    <sbe:message name="NoSuchEntity" id="21">
+        <field name="trackingId" id="1" type="uint64"/>
+    </sbe:message>
+
+    <sbe:message name="AccountData" id="22">
+        <field name="trackingId" id="1" type="uint64"/>
+        <field name="availableAmount" id="2" type="Decimal"/>
+        <field name="reservedAmount" id="3" type="Decimal"/>
+    </sbe:message>
+
+    <sbe:message name="WithdrawalData" id="23">
+        <field name="trackingId" id="1" type="uint64"/>
+        <field name="amount" id="2" type="Decimal"/>
+        <field name="state" id="3" type="WithdrawalState"/>
+    </sbe:message>
+
+    <sbe:message name="SameAccount" id="24">
+        <field name="trackingId" id="1" type="uint64"/>
+    </sbe:message>
+
+</sbe:messageSchema>
