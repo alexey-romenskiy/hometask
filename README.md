@@ -81,4 +81,7 @@ when [WithdrawalServiceStub.java](service%2Fsrc%2Fmain%2Fjava%2Forg%2Fexample%2F
 may be replaced with some external HTTP API. This or other way,
 using [WithdrawalService.java](service%2Fsrc%2Fmain%2Fjava%2Forg%2Fexample%2Fhometask%2Fexternal%2FWithdrawalService.java)
 requires IO and more likely non-deterministic. It also may be very slow and unreliable. Due to all these reasons, I
-moved it out of the deterministic state machine.
+moved it out of the deterministic state machine. In case if any calls
+to [WithdrawalService.java](service%2Fsrc%2Fmain%2Fjava%2Forg%2Fexample%2Fhometask%2Fexternal%2FWithdrawalService.java)
+may take more than millisecond latencies, we may be needed to wrap it into a separate thread pool. Increasing ring
+buffer instead of this would be a bad idea for cache locality reasons.
