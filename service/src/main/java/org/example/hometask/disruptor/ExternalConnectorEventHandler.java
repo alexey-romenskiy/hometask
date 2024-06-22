@@ -1,10 +1,9 @@
 package org.example.hometask.disruptor;
 
 import com.lmax.disruptor.EventHandler;
-import org.example.hometask.external.DuplicateWithdrawalIdException;
-import org.example.hometask.external.UnknownWithdrawalIdException;
 import org.example.hometask.external.WithdrawalService;
 import org.example.hometask.external.WithdrawalServiceStub;
+import org.example.hometask.messages.WithdrawalState;
 import org.example.hometask.messages.disruptor.CreateWithdrawalDuplicationFailureEvent;
 import org.example.hometask.messages.disruptor.CreateWithdrawalSuccessEvent;
 import org.example.hometask.messages.disruptor.Event;
@@ -29,7 +28,7 @@ class ExternalConnectorEventHandler implements EventHandler<EventHolder> {
     }
 
     @Override
-    public void onEvent(@NotNull EventHolder holder, long sequence, boolean endOfBatch) throws Exception {
+    public void onEvent(@NotNull EventHolder holder, long sequence, boolean endOfBatch) {
 
         for (final var request : holder.withdrawalRequests) {
             request.accept(new WithdrawalRequest.Visitor<Void, RuntimeException>() {
@@ -38,7 +37,7 @@ class ExternalConnectorEventHandler implements EventHandler<EventHolder> {
                     try {
                         withdrawalService.requestWithdrawal(request.id(), request.address(), request.amount());
                         publish(new CreateWithdrawalSuccessEvent(request.id()));
-                    } catch (DuplicateWithdrawalIdException e) {
+                    } catch (IllegalStateException e) {
                         publish(new CreateWithdrawalDuplicationFailureEvent(request.id()));
                     }
                     return null;
@@ -47,9 +46,15 @@ class ExternalConnectorEventHandler implements EventHandler<EventHolder> {
                 @Override
                 public Void visit(@NotNull QueryWithdrawalRequest request) {
                     try {
-                        final var state = withdrawalService.getRequestState(request.id());
+                        final var externalState = withdrawalService.getRequestState(request.id());
+                        final var state = switch (externalState) {
+                            case PROCESSING -> WithdrawalState.PROCESSING;
+                            case COMPLETED -> WithdrawalState.COMPLETED;
+                            case FAILED -> WithdrawalState.FAILED;
+                            default -> throw new IllegalArgumentException("Unsupported state: " + externalState);
+                        };
                         publish(new QueryWithdrawalSuccessEvent(request.id(), state));
-                    } catch (UnknownWithdrawalIdException e) {
+                    } catch (IllegalArgumentException e) {
                         publish(new QueryWithdrawalUnknownIdFailureEvent(request.id()));
                     }
                     return null;

@@ -1,36 +1,30 @@
 package org.example.hometask.external;
 
-import org.example.hometask.messages.WithdrawalState;
-
 import java.math.BigDecimal;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ThreadLocalRandom;
 
-import static org.example.hometask.messages.WithdrawalState.FAILED;
-import static org.example.hometask.messages.WithdrawalState.PROCESSING;
+import static org.example.hometask.external.WithdrawalService.WithdrawalState.COMPLETED;
+import static org.example.hometask.external.WithdrawalService.WithdrawalState.FAILED;
+import static org.example.hometask.external.WithdrawalService.WithdrawalState.PROCESSING;
 
 public class WithdrawalServiceStub implements WithdrawalService {
 
     private final ConcurrentMap<WithdrawalId, Withdrawal> requests = new ConcurrentHashMap<>();
 
     @Override
-    public void requestWithdrawal(
-            WithdrawalId id,
-            Address address,
-            BigDecimal amount
-    ) throws DuplicateWithdrawalIdException {
-
+    public void requestWithdrawal(WithdrawalId id, Address address, BigDecimal amount) {
         final var existing = requests.putIfAbsent(id, new Withdrawal(finalState(), finaliseAt(), address, amount));
         if (existing != null && !Objects.equals(existing.address, address) &&
             !Objects.equals(existing.amount, amount)) {
-            throw new DuplicateWithdrawalIdException(id);
+            throw new IllegalStateException("Withdrawal request with id[%s] is already present".formatted(id));
         }
     }
 
     private WithdrawalState finalState() {
-        return ThreadLocalRandom.current().nextBoolean() ? WithdrawalState.COMPLETED : FAILED;
+        return ThreadLocalRandom.current().nextBoolean() ? COMPLETED : FAILED;
     }
 
     private long finaliseAt() {
@@ -38,10 +32,10 @@ public class WithdrawalServiceStub implements WithdrawalService {
     }
 
     @Override
-    public WithdrawalState getRequestState(WithdrawalId id) throws UnknownWithdrawalIdException {
+    public WithdrawalState getRequestState(WithdrawalId id) {
         final var request = requests.get(id);
         if (request == null) {
-            throw new UnknownWithdrawalIdException(id);
+            throw new IllegalArgumentException("Request %s is not found".formatted(id));
         }
         return request.finalState();
     }
