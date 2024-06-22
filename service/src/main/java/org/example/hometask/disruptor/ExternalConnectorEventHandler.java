@@ -51,7 +51,6 @@ class ExternalConnectorEventHandler implements EventHandler<EventHolder> {
                             case PROCESSING -> WithdrawalState.PROCESSING;
                             case COMPLETED -> WithdrawalState.COMPLETED;
                             case FAILED -> WithdrawalState.FAILED;
-                            default -> throw new IllegalArgumentException("Unsupported state: " + externalState);
                         };
                         publish(new QueryWithdrawalSuccessEvent(request.id(), state));
                     } catch (IllegalArgumentException e) {

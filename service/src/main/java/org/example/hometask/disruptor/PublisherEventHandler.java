@@ -155,7 +155,11 @@ class PublisherEventHandler implements EventHandler<EventHolder> {
                 withdrawalDataEncoder.wrapAndApplyHeader(buffer, 0, headerEncoder);
                 withdrawalDataEncoder.trackingId(event.trackingId());
                 setBigDecimal(withdrawalDataEncoder.amount(), event.amount());
-                withdrawalDataEncoder.state(WithdrawalState.get((short) event.state().ordinal()));
+                withdrawalDataEncoder.state(switch (event.state()) {
+                    case PROCESSING -> WithdrawalState.PROCESSING;
+                    case COMPLETED -> WithdrawalState.COMPLETED;
+                    case FAILED -> WithdrawalState.FAILED;
+                });
                 return withdrawalDataEncoder.encodedLength();
             }
 

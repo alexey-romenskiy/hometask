@@ -101,9 +101,16 @@ public class ClientAdapter implements FragmentHandler {
             case WithdrawalDataDecoder.TEMPLATE_ID -> {
                 withdrawalDataDecoder.wrap(buffer, offset + headerDecoder.encodedLength(), headerDecoder.blockLength(),
                         headerDecoder.version());
-                return new WithdrawalDataAeronResponse(withdrawalDataDecoder.trackingId(),
+                return new WithdrawalDataAeronResponse(
+                        withdrawalDataDecoder.trackingId(),
                         getBigDecimal(withdrawalDataDecoder.amount()),
-                        WithdrawalState.values()[withdrawalDataDecoder.state().ordinal()]);
+                        switch (withdrawalDataDecoder.state()) {
+                            case PROCESSING -> WithdrawalState.PROCESSING;
+                            case COMPLETED -> WithdrawalState.COMPLETED;
+                            case FAILED -> WithdrawalState.FAILED;
+                            case NULL_VAL -> throw new IllegalArgumentException("Null state is not allowed");
+                        }
+                );
             }
             case SameAccountDecoder.TEMPLATE_ID -> {
                 sameAccountDecoder.wrap(buffer, offset + headerDecoder.encodedLength(), headerDecoder.blockLength(),

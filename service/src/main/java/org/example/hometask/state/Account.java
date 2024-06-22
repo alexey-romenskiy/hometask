@@ -1,5 +1,6 @@
 package org.example.hometask.state;
 
+import org.example.hometask.messages.WithdrawalState;
 import org.jetbrains.annotations.NotNull;
 
 import java.math.BigDecimal;
@@ -87,13 +88,24 @@ public class Account {
     public void withdrawalCompleted(@NotNull Withdrawal withdrawal) {
         pendingAmount = pendingAmount.subtract(withdrawal.getAmount());
         pendingWithdrawals.remove(withdrawal.getId(), withdrawal);
-        switch (withdrawal.getState()) {
-            case COMPLETED -> adjustReserved(withdrawal.getAmount().negate());
-            case FAILED -> {
+        withdrawal.getState().accept(new WithdrawalState.Visitor<Void, RuntimeException>() {
+            @Override
+            public Void visitProcessing() {
+                throw new IllegalStateException();
+            }
+
+            @Override
+            public Void visitCompleted() {
+                adjustReserved(withdrawal.getAmount().negate());
+                return null;
+            }
+
+            @Override
+            public Void visitFailed() {
                 adjustReserved(withdrawal.getAmount().negate());
                 adjustAvailable(withdrawal.getAmount());
+                return null;
             }
-            default -> throw new IllegalStateException();
-        }
+        });
     }
 }
