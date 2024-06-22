@@ -15,7 +15,7 @@ public class Publisher {
     }
 
     public void publish(int sessionId, @NotNull AeronResponse message) {
-        eventContext.holder().outboundAeronMessageEnvelope = new OutboundAeronMessageEnvelope(sessionId, message);
+        eventContext.holder().messages.add(new OutboundAeronMessageEnvelope(sessionId, message));
     }
 
     public void publish(@NotNull WithdrawalRequest request) {

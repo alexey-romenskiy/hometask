@@ -60,8 +60,7 @@ class PublisherEventHandler implements EventHandler<EventHolder> {
     @Override
     public void onEvent(@NotNull EventHolder holder, long sequence, boolean endOfBatch) {
 
-        final var envelope = holder.outboundAeronMessageEnvelope;
-        if (envelope != null) {
+        for (final var envelope : holder.messages) {
             publish(envelope.sessionId(), serialize(envelope.message()));
         }
     }

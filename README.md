@@ -54,7 +54,7 @@ some User authorized to make a transfer or withdrawal - outside our Service.
 ### Deterministic Behaviour
 
 Some serious concerns raised regarding UUIDs. Please see my comments in my code at
-[org.example.hometask.Controller.generateUuid()](service%2Fsrc%2Fmain%2Fjava%2Forg%2Fexample%2Fhometask%2FController.java).
+[org.example.hometask.state.PendingWithdrawalOperation.generateUuid()](service%2Fsrc%2Fmain%2Fjava%2Forg%2Fexample%2Fhometask%2Fstate%2FPendingWithdrawalOperation.java).
 I solved problems with deterministic random numbers before, but it may be out of scope of my homework now.
 
 Also, due to absence of durability, I did not implement logic for retrying external requests

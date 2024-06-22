@@ -1,10 +1,11 @@
 package org.example.hometask.messages.external;
 
-import org.example.hometask.external.WithdrawalService;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.UUID;
+
 public record QueryWithdrawalRequest(
-        @NotNull WithdrawalService.WithdrawalId id
+        @NotNull UUID withdrawalUuid
 ) implements WithdrawalRequest {
 
     @Override

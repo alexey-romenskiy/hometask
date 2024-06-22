@@ -1,13 +1,13 @@
 package org.example.hometask.messages.external;
 
-import org.example.hometask.external.WithdrawalService;
 import org.jetbrains.annotations.NotNull;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 public record CreateWithdrawalRequest(
-        @NotNull WithdrawalService.WithdrawalId id,
-        @NotNull WithdrawalService.Address address,
+        @NotNull UUID withdrawalUuid,
+        @NotNull String address,
         @NotNull BigDecimal amount
 ) implements WithdrawalRequest {
 

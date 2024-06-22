@@ -13,15 +13,15 @@ public final class EventHolder {
     @Nullable
     public Event event;
 
-    @Nullable
-    public OutboundAeronMessageEnvelope outboundAeronMessageEnvelope;
+    @NotNull
+    public final ArrayList<OutboundAeronMessageEnvelope> messages = new ArrayList<>(1);
 
     @NotNull
     public final ArrayList<WithdrawalRequest> withdrawalRequests = new ArrayList<>(1);
 
     public void clean() {
         event = null;
-        outboundAeronMessageEnvelope = null;
+        messages.clear();
         withdrawalRequests.clear();
     }
 }

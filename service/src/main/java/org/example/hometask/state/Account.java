@@ -64,7 +64,7 @@ public class Account {
         return pendingWithdrawals;
     }
 
-    public boolean reduce(@NotNull BigDecimal amount) {
+    public boolean credit(@NotNull BigDecimal amount) {
         if (amount.compareTo(availableAmount) > 0) {
             return false;
         }

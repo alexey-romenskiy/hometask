@@ -28,7 +28,7 @@ class StateMachineEventHandler implements EventHandler<EventHolder> {
             logger.info("Processing event: {}", event);
             eventContext.holder = holder;
             controller.accept(event);
-            logger.info("Result: envelope={} withdrawalRequests={}", holder.outboundAeronMessageEnvelope,
+            logger.info("Result: envelope={} withdrawalRequests={}", holder.messages,
                     holder.withdrawalRequests);
         }
     }

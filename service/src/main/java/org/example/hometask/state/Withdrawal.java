@@ -3,7 +3,6 @@ package org.example.hometask.state;
 import org.example.hometask.disruptor.Publisher;
 import org.example.hometask.external.WithdrawalService;
 import org.example.hometask.messages.WithdrawalState;
-import org.example.hometask.messages.external.CreateWithdrawalRequest;
 import org.example.hometask.messages.external.QueryWithdrawalRequest;
 import org.example.hometask.messages.response.AccountWithdrawalDoneAeronResponse;
 import org.jetbrains.annotations.NotNull;
@@ -51,7 +50,7 @@ public class Withdrawal {
     /**
      * All delayed operations awaiting the current pending external request.
      */
-    private ArrayList<PendingWithdrawalQuery> pendingQueries = new ArrayList<>();
+    private ArrayList<PendingWithdrawalStateQuery> pendingQueries = new ArrayList<>();
 
     /**
      * All delayed operations awaiting the state update,
@@ -59,7 +58,7 @@ public class Withdrawal {
      * the current external request had been issued BEFORE those operations created).
      * Those delayed operations will be handled by the next external request.
      */
-    private ArrayList<PendingWithdrawalQuery> queuedQueries = new ArrayList<>();
+    private ArrayList<PendingWithdrawalStateQuery> queuedQueries = new ArrayList<>();
 
     public Withdrawal(
             @NotNull Publisher publisher,
@@ -79,10 +78,9 @@ public class Withdrawal {
         this.uuid = uuid;
         this.sessionId = sessionId;
         this.trackingId = trackingId;
-        publishCreate();
     }
 
-    public void updateState(@NotNull PendingWithdrawalQuery query) {
+    public void updateState(@NotNull PendingWithdrawalStateQuery query) {
 
         if (state != PROCESSING) {
             throw new IllegalStateException();
@@ -103,14 +101,14 @@ public class Withdrawal {
             account.withdrawalCompleted(this);
         }
         for (final var query : pendingQueries) {
-            query.completed(state);
+            query.completed();
         }
         roll();
     }
 
     public void queryFailed() {
         for (final var query : pendingQueries) {
-            query.failed();
+            query.completed();
         }
         roll();
     }
@@ -127,7 +125,7 @@ public class Withdrawal {
                 publishQuery();
             } else {
                 for (final var query : queuedQueries) {
-                    query.completed(state);
+                    query.completed();
                 }
                 queuedQueries.clear();
             }
@@ -142,11 +140,7 @@ public class Withdrawal {
     }
 
     private void publishQuery() {
-        publisher.publish(new QueryWithdrawalRequest(new WithdrawalService.WithdrawalId(uuid)));
-    }
-
-    private void publishCreate() {
-        publisher.publish(new CreateWithdrawalRequest(new WithdrawalService.WithdrawalId(uuid), address, amount));
+        publisher.publish(new QueryWithdrawalRequest(uuid));
     }
 
     public long getId() {

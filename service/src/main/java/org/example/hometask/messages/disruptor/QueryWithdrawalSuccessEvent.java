@@ -1,11 +1,12 @@
 package org.example.hometask.messages.disruptor;
 
-import org.example.hometask.external.WithdrawalService;
 import org.example.hometask.messages.WithdrawalState;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.UUID;
+
 public record QueryWithdrawalSuccessEvent(
-        @NotNull WithdrawalService.WithdrawalId withdrawalId,
+        @NotNull UUID withdrawalUuid,
         @NotNull WithdrawalState state
 ) implements Event {
 

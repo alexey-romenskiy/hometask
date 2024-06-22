@@ -35,10 +35,12 @@ class ExternalConnectorEventHandler implements EventHandler<EventHolder> {
                 @Override
                 public Void visit(@NotNull CreateWithdrawalRequest request) {
                     try {
-                        withdrawalService.requestWithdrawal(request.id(), request.address(), request.amount());
-                        publish(new CreateWithdrawalSuccessEvent(request.id()));
+                        withdrawalService.requestWithdrawal(
+                                new WithdrawalService.WithdrawalId(request.withdrawalUuid()),
+                                new WithdrawalService.Address(request.address()), request.amount());
+                        publish(new CreateWithdrawalSuccessEvent(request.withdrawalUuid()));
                     } catch (IllegalStateException e) {
-                        publish(new CreateWithdrawalDuplicationFailureEvent(request.id()));
+                        publish(new CreateWithdrawalDuplicationFailureEvent(request.withdrawalUuid()));
                     }
                     return null;
                 }
@@ -46,15 +48,16 @@ class ExternalConnectorEventHandler implements EventHandler<EventHolder> {
                 @Override
                 public Void visit(@NotNull QueryWithdrawalRequest request) {
                     try {
-                        final var externalState = withdrawalService.getRequestState(request.id());
+                        final var externalState = withdrawalService.getRequestState(
+                                new WithdrawalService.WithdrawalId(request.withdrawalUuid()));
                         final var state = switch (externalState) {
                             case PROCESSING -> WithdrawalState.PROCESSING;
                             case COMPLETED -> WithdrawalState.COMPLETED;
                             case FAILED -> WithdrawalState.FAILED;
                         };
-                        publish(new QueryWithdrawalSuccessEvent(request.id(), state));
+                        publish(new QueryWithdrawalSuccessEvent(request.withdrawalUuid(), state));
                     } catch (IllegalArgumentException e) {
-                        publish(new QueryWithdrawalUnknownIdFailureEvent(request.id()));
+                        publish(new QueryWithdrawalUnknownIdFailureEvent(request.withdrawalUuid()));
                     }
                     return null;
                 }

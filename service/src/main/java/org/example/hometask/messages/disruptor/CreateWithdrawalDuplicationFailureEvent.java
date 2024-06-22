@@ -1,10 +1,11 @@
 package org.example.hometask.messages.disruptor;
 
-import org.example.hometask.external.WithdrawalService;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.UUID;
+
 public record CreateWithdrawalDuplicationFailureEvent(
-        @NotNull WithdrawalService.WithdrawalId withdrawalId
+        @NotNull UUID withdrawalUuid
 ) implements Event {
 
     @Override
