@@ -62,7 +62,7 @@ public class Controller {
 
             @Override
             public Void visit(@NotNull CreateWithdrawalDuplicationFailureEvent event) {
-                // We assume nobody else could use iur UUID and the withdrawal was just created earlier.
+                // We assume nobody else could use our UUID and the withdrawal was just created earlier.
                 // This may occur after temporary network failure or restart of our service.
                 logger.warn("Duplicated withdrawal UUID encountered: {}", event.withdrawalUuid());
                 getWithdrawal(event.withdrawalUuid()).createDone();

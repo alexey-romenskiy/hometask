@@ -278,6 +278,9 @@ public class ControllerTest {
                 holder.messages
         );
         assertTrue(holder.withdrawalRequests.isEmpty());
+        trackingSequence++;
+
+        checkBalance(1, INITIAL_AMOUNT.subtract(TRANSFER_AMOUNT1), ZERO);
     }
 
     @Test
@@ -481,6 +484,21 @@ public class ControllerTest {
         assertEquals(List.of(new QueryWithdrawalRequest(getUuid(1))), holder.withdrawalRequests);
 
         process(new QueryWithdrawalSuccessEvent(getUuid(1), COMPLETED));
+        assertEquals(
+                List.of(new OutboundAeronMessageEnvelope(
+                        SESSION_ID,
+                        new WithdrawalDataAeronResponse(
+                                trackingSequence,
+                                TRANSFER_AMOUNT1,
+                                COMPLETED
+                        )
+                )),
+                holder.messages
+        );
+        assertTrue(holder.withdrawalRequests.isEmpty());
+        trackingSequence++;
+
+        process(new InboundAeronMessageEvent(SESSION_ID, new QueryWithdrawalAeronRequest(trackingSequence, 1)));
         assertEquals(
                 List.of(new OutboundAeronMessageEnvelope(
                         SESSION_ID,
